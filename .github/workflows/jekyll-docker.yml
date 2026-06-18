@@ -1,20 +1,30 @@
-name: Jekyll site CI
+name: AWS Deploy using OIDC
 
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+
+# Top-level permissions required for OIDC authentication
+permissions:
+  id-token: write  # Critical: Mandatory to request the JWT token
+  contents: read   # Necessary to checkout the repository code
 
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
-
+  aws-deployment:
+    runs-on: self-hosted  # Or ubuntu-latest if using GitHub hosted runners
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the site in the jekyll/builder container
-      run: |
-        docker run \
-        -v ${{ github.workspace }}:/srv/jekyll -v ${{ github.workspace }}/_site:/srv/jekyll/_site \
-        jekyll/builder:latest /bin/bash -c "chmod -R 777 /srv/jekyll && jekyll build --future"
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate with AWS via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # Replace with your actual IAM Role ARN or use a GitHub Secret/Variable
+          role-to-assume: arn:aws:iam::123456789012:role/github-actions-oidc-role
+          aws-region: us-east-1
+          audience: sts.amazonaws.com
+
+      - name: Verify AWS Identity Connection
+        run: |
+          aws sts get-caller-identity
+
